@@ -4,19 +4,27 @@ from fastapi import FastAPI
 
 app = FastAPI(title="Users Service")
 
-# TODO 1: crea una lista "usuarios" en memoria con al menos 2 usuarios
-# Ejemplo: {"id": 1, "nombre": "Juan"}
+# TODO 1: lista "usuarios" en memoria
 usuarios = [
-    # TODO: agrega tus usuarios aqui
+    {"id": 1, "nombre": "Jorge"},
+    {"id": 2, "nombre": "Juan"},
+    {"id": 3, "nombre": "Maria"},
+    {"id": 4, "nombre": "Laura"},
+    {"id": 5, "nombre": "Carlos"},
+    {"id": 6, "nombre": "Yedes"},
 ]
+
 
 @app.get("/usuarios/{usuario_id}")
 def obtener_usuario(usuario_id: int):
-    # TODO 2: busca el usuario por id en la lista "usuarios" y retornalo
-    # Si no existe, retorna un dict {"error": "no encontrado"} (por simplicidad en este ejercicio)
-    pass
+    # TODO 2: busca el usuario por id
+    for usuario in usuarios:
+        if usuario["id"] == usuario_id:
+            return usuario
+    return {"error": "no encontrado"}
+
 
 @app.get("/usuarios")
 def listar_usuarios():
-    # TODO 3: retorna la lista completa de usuarios
-    pass
+    # TODO 3: retorna la lista completa
+    return usuarios

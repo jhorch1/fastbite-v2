@@ -1,0 +1,7 @@
+# Entorno virtual y archivos generados (no se suben)
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.log
+.vscode/

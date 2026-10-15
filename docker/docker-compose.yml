@@ -1,0 +1,76 @@
+# docker-compose.yml
+# Levanta TODO el sistema FastBite (microservicios + RabbitMQ) con un solo comando.
+# Desde esta carpeta (docker/):
+#   docker compose up --build
+#
+# Dentro de Docker los servicios se encuentran por su NOMBRE (no por localhost),
+# por eso se pasan las URLs con variables de entorno.
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  users-service:
+    build: ../users-service
+    ports:
+      - "8001:8001"
+    # TODO 1: command para correr uvicorn en el puerto 8001
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+
+  menu-service:
+    build: ../menu-service
+    ports:
+      - "8002:8002"
+    # TODO 2: command para correr uvicorn en el puerto 8002
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+
+  orders-service:
+    build: ../orders-service
+    ports:
+      - "8003:8003"
+    environment:
+      USERS_SERVICE_URL: http://users-service:8001
+      MENU_SERVICE_URL: http://menu-service:8002
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      users-service:
+        condition: service_started
+      menu-service:
+        condition: service_started
+    # TODO 3: command para correr uvicorn en el puerto 8003
+    command: uvicorn main:app --host 0.0.0.0 --port 8003
+
+  notifications-service:
+    build: ../notifications-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    command: python -u main.py
+
+  gateway-service:
+    build: ../gateway-service
+    ports:
+      - "8000:8000"
+    environment:
+      USERS_SERVICE_URL: http://users-service:8001
+      MENU_SERVICE_URL: http://menu-service:8002
+      ORDERS_SERVICE_URL: http://orders-service:8003
+    depends_on:
+      - users-service
+      - menu-service
+      - orders-service
+    # TODO 4: command para correr uvicorn en el puerto 8000
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
