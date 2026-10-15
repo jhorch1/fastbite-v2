@@ -1,6 +1,7 @@
 # users-service/main.py
 # Microservicio independiente de usuarios. Corre en el puerto 8001.
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Users Service")
 
@@ -21,7 +22,10 @@ def obtener_usuario(usuario_id: int):
     for usuario in usuarios:
         if usuario["id"] == usuario_id:
             return usuario
-    return {"error": "no encontrado"}
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Usuario no encontrado"},
+    )
 
 
 @app.get("/usuarios")

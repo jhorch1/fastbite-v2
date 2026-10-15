@@ -7,13 +7,16 @@
 event_store = []
 
 
-def comando_crear_pedido(usuario: str, items: list):
+def comando_crear_pedido(pedido_id: int, usuario: str, items: list):
     """
     LADO DEL COMANDO (escritura).
     En vez de guardar el pedido final directamente, se guarda un EVENTO.
     """
     # TODO 2: crea el evento
-    evento = {"tipo": "PedidoCreado", "datos": {"usuario": usuario, "items": items}}
+    evento = {
+        "tipo": "PedidoCreado",
+        "datos": {"pedido_id": pedido_id, "usuario": usuario, "items": items},
+    }
     # TODO 3: agregalo a event_store
     event_store.append(evento)
     # TODO 4: retorna una confirmacion simple
@@ -38,7 +41,7 @@ def consulta_resumen_pedidos():
     for evento in event_store:
         if evento["tipo"] == "PedidoCreado":
             resumen.append({
-                "id": len(resumen) + 1,   # el id es el orden de creacion
+                "id": evento["datos"]["pedido_id"],
                 "usuario": evento["datos"]["usuario"],
                 "items": evento["datos"]["items"],
                 "estado": "activo"

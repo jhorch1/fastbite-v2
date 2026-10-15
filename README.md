@@ -96,6 +96,8 @@ Por el gateway, las rutas son `/api/{servicio}/{ruta}`:
 2. Ver la notificación en los logs de `notifications-service`:
    `NOTIFICACION: Hola Jorge (usuario 1), tu pedido #1 por $44000 (nequi) fue creado con exito.`
 3. CQRS: `GET /api/pedidos/pedidos/resumen` (estado reconstruido) y `GET /api/pedidos/pedidos/eventos` (event store).
+   Cada evento `PedidoCreado` conserva el ID asignado al pedido; el publicador reutiliza
+   una conexión RabbitMQ durante la vida del servicio y la cierra al apagarlo.
 
 ## Endpoints principales de orders-service
 

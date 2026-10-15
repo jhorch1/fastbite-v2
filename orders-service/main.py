@@ -3,8 +3,10 @@
 # Se comunica por HTTP con users-service (8001) y menu-service (8002),
 # y usa un sistema de PLUGINS para procesar pagos (patron Microkernel).
 
-import os
+from contextlib import asynccontextmanager
 from datetime import datetime
+import os
+from threading import Lock
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -18,7 +20,7 @@ import pkgutil
 import plugins
 
 # Publicador de eventos hacia RabbitMQ (coreografia)
-from eventos import publicar_evento
+from eventos import cerrar_publicador, iniciar_publicador, publicar_evento
 
 # CQRS + Event Sourcing (Semana 4)
 from orders_service_cqrs_extension import (
@@ -28,7 +30,16 @@ from orders_service_cqrs_extension import (
     event_store,
 )
 
-app = FastAPI(title="Orders Service")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    iniciar_publicador()
+    try:
+        yield
+    finally:
+        cerrar_publicador()
+
+
+app = FastAPI(title="Orders Service", lifespan=lifespan)
 
 # En local: localhost. En Docker, docker-compose las cambia por el nombre del servicio.
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://localhost:8001")
@@ -36,6 +47,7 @@ MENU_SERVICE_URL = os.getenv("MENU_SERVICE_URL", "http://localhost:8002")
 
 pedidos = []
 siguiente_id = 1
+_pedido_id_lock = Lock()
 
 # TODO 2: diccionario PLUGINS (nombre del metodo -> funcion procesar del plugin)
 # Patron Microkernel: el nucleo carga automaticamente todo archivo plugins/pago_*.py
@@ -144,19 +156,20 @@ def crear_pedido(pedido: NuevoPedido):
         )
 
     # TODO 7: crea y guarda el pedido
-    nuevo = {
-        "id": siguiente_id,
-        "usuario_id": pedido.usuario_id,
-        "usuario": usuario["nombre"],
-        "items": detalle,
-        "total": monto_total,
-        "metodo_pago": pedido.metodo_pago,
-        "pago": resultado_pago,
-        "estado": "creado",
-        "historial": [{"estado": "creado", "fecha": datetime.now().isoformat(timespec="seconds")}],
-    }
-    pedidos.append(nuevo)
-    siguiente_id += 1
+    with _pedido_id_lock:
+        nuevo = {
+            "id": siguiente_id,
+            "usuario_id": pedido.usuario_id,
+            "usuario": usuario["nombre"],
+            "items": detalle,
+            "total": monto_total,
+            "metodo_pago": pedido.metodo_pago,
+            "pago": resultado_pago,
+            "estado": "creado",
+            "historial": [{"estado": "creado", "fecha": datetime.now().isoformat(timespec="seconds")}],
+        }
+        pedidos.append(nuevo)
+        siguiente_id += 1
 
     # Coreografia: publicamos el evento y terminamos.
     # No sabemos (ni nos importa) quien escucha este evento.
@@ -173,7 +186,7 @@ def crear_pedido(pedido: NuevoPedido):
         print(f"[eventos] No se pudo publicar PedidoCreado (RabbitMQ apagado?): {error!r}")
     # CQRS: ademas de crear el pedido, se registra el EVENTO PedidoCreado
     items_dict = [item.model_dump() for item in pedido.items]
-    confirmacion = comando_crear_pedido(str(pedido.usuario_id), items_dict)
+    confirmacion = comando_crear_pedido(nuevo["id"], str(pedido.usuario_id), items_dict)
 
     return {"pedido": nuevo, "cqrs": confirmacion}
 

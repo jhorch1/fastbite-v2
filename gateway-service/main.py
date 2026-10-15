@@ -10,6 +10,7 @@
 import os
 
 from fastapi import Body, FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 import httpx
 
 app = FastAPI(title="API Gateway - FastBite")
@@ -34,7 +35,10 @@ async def reenviar(servicio: str, ruta_resto: str, request: Request):
     """Logica comun del gateway: reenvia la peticion al microservicio."""
     # TODO 2: valida que "servicio" exista en RUTAS
     if servicio not in RUTAS:
-        return {"error": "servicio no encontrado"}
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Servicio no encontrado"},
+        )
 
     # TODO 3: construye la url destino
     url_destino = f"{RUTAS[servicio]}/{ruta_resto}"

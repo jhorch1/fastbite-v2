@@ -1,6 +1,7 @@
 # menu-service/main.py
 # Microservicio independiente de menu. Corre en el puerto 8002.
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Menu Service")
 
@@ -23,7 +24,10 @@ def obtener_producto(producto_id: int):
     for producto in menu:
         if producto["id"] == producto_id:
             return producto
-    return {"error": "no encontrado"}
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Producto no encontrado"},
+    )
 
 
 @app.get("/menu")
