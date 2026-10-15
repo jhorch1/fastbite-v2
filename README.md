@@ -34,7 +34,7 @@ Sistema de pedidos de comida construido por semanas en el curso de Arquitectura 
 **Requisito:** tener [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y abierto (debe decir *Engine running*).
 
 ```powershell
-git clone https://github.com/TU_USUARIO/fastbite-v2.git
+git clone https://github.com/jhorch1/fastbite-v2.git
 cd fastbite-v2/docker
 docker compose up --build
 ```

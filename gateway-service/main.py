@@ -9,7 +9,7 @@
 
 import os
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Body, FastAPI, Request, Response
 import httpx
 
 app = FastAPI(title="API Gateway - FastBite")
@@ -30,8 +30,8 @@ def inicio():
             "uso": "/api/{servicio}/{ruta}  ej: /api/menu/menu"}
 
 
-@app.api_route("/api/{servicio}/{ruta_resto:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def gateway(servicio: str, ruta_resto: str, request: Request):
+async def reenviar(servicio: str, ruta_resto: str, request: Request):
+    """Logica comun del gateway: reenvia la peticion al microservicio."""
     # TODO 2: valida que "servicio" exista en RUTAS
     if servicio not in RUTAS:
         return {"error": "servicio no encontrado"}
@@ -62,3 +62,34 @@ async def gateway(servicio: str, ruta_resto: str, request: Request):
         status_code=respuesta.status_code,
         media_type=respuesta.headers.get("content-type", "application/json"),
     )
+
+
+# Una ruta por metodo HTTP, cada una con su propio nombre (operation_id unico).
+# Si se usa una sola funcion con methods=["GET","POST","PUT","DELETE"], Swagger
+# genera las 4 operaciones con el MISMO identificador y al probar GET puede
+# terminar enviando otro metodo (por ejemplo DELETE).
+RUTA = "/api/{servicio}/{ruta_resto:path}"
+
+
+@app.get(RUTA, operation_id="gateway_get")
+async def proxy_get(servicio: str, ruta_resto: str, request: Request):
+    return await reenviar(servicio, ruta_resto, request)
+
+
+# "datos" solo sirve para que Swagger muestre un cuadro donde escribir el JSON;
+# el gateway reenvia el cuerpo original tal cual.
+@app.post(RUTA, operation_id="gateway_post")
+async def proxy_post(servicio: str, ruta_resto: str, request: Request,
+                     datos: dict | None = Body(default=None)):
+    return await reenviar(servicio, ruta_resto, request)
+
+
+@app.put(RUTA, operation_id="gateway_put")
+async def proxy_put(servicio: str, ruta_resto: str, request: Request,
+                    datos: dict | None = Body(default=None)):
+    return await reenviar(servicio, ruta_resto, request)
+
+
+@app.delete(RUTA, operation_id="gateway_delete")
+async def proxy_delete(servicio: str, ruta_resto: str, request: Request):
+    return await reenviar(servicio, ruta_resto, request)
